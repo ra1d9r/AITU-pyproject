@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Admin Console</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            width: 150px;
+            display: none;
+            flex-direction: column;
+            padding: 5px;
+            z-index: 1000;
+        }
+        .user-dropdown.show { display: flex; }
+        .user-dropdown button {
+            width: 100%;
+            text-align: left;
+            padding: 8px 12px;
+            color: var(--color-text);
+            border-radius: 4px;
+        }
+        .user-dropdown button:hover {
+            background: var(--color-bg-elevated);
+            color: var(--color-accent);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- INTRO SCREEN -->
+    <div id="intro-screen">
+        <div class="intro-scanlines"></div>
+        <div class="intro-noise"></div>
+        <div id="intro-hacking" class="intro-stage">
+            <canvas id="matrix-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- VIEW TRANSITION OVERLAY -->
+    <div id="view-transition" class="hidden">
+        <div class="transition-scanline"></div>
+    </div>
+
+    <!-- LANDING PAGE -->
+    <section id="landing-page" class="hidden">
+        <header class="landing-header">
+            <div class="logo">
+                <div class="logo-icon">B</div>
+                <span class="logo-text">BotConsole</span>
+            </div>
+            <button id="btn-login" class="btn btn-primary">Войти</button>
+        </header>
+        <main class="landing-hero">
+            <div class="hero-badge"><span>✨</span> Admin Dashboard v2.0</div>
+            <h1 class="hero-title">Управляй ботом как профи</h1>
+            <p class="hero-subtitle">Мощная админ-консоль для Discord бота.</p>
+            <div class="hero-actions">
+                <button id="btn-add-server" class="btn btn-primary">➕ Add Server</button>
+            </div>
+        </main>
+    </section>
+
+    <!-- APP LAYOUT -->
+    <div id="app-layout" class="hidden">
+        <header class="app-header">
+            <div class="header-left">
+                <button id="btn-menu" class="btn btn-ghost btn-icon">☰</button>
+                <div class="logo">
+                    <div class="logo-icon">B</div><span class="logo-text">BotConsole</span>
+                </div>
+            </div>
+            
+            <div id="header-folder-context" class="header-context hidden">
+                <span class="context-label">Папка:</span>
+                <span id="active-folder-name" class="context-value">Не выбрана</span>
+                <button id="btn-exit-folder" class="btn btn-ghost btn-sm">✕ Выйти</button>
+            </div>
+
+            <div class="header-right">
+                <button id="btn-settings" class="btn btn-ghost btn-icon" title="Settings">⚙</button>
+                <div style="position:relative;">
+                    <div id="user-menu" class="user-menu">
+                        <div class="user-avatar">U</div>
+                        <span class="user-name">Operator</span>
+                    </div>
+                    <div id="user-dropdown" class="user-dropdown">
+                        <button id="btn-logout">🚪 Logout</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-container">
+            <aside id="sidebar" class="sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Server Context</div>
+                    <button class="nav-item" data-view="folders"><span class="nav-icon">🗂️</span> Server Folders</button>
+                </div>
+                
+                <div id="nav-locked-section" class="locked-overlay">
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">Main</div>
+                        <button class="nav-item" data-view="dashboard"><span class="nav-icon">▣</span> Dashboard</button>
+                        <button class="nav-item" data-view="logs-messages"><span class="nav-icon">💬</span> Живые Логи</button>
+                        <button class="nav-item" data-view="moderation"><span class="nav-icon">🛡️</span> Access Control</button>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">Fun & Extras</div>
+                        <button class="nav-item" data-view="tetris"><span class="nav-icon">🕹️</span> Tetris</button>
+                        <button class="nav-item" data-view="memes"><span class="nav-icon">🐸</span> Memes</button>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="content-area">
+                <!-- Dashboard -->
+                <section id="view-dashboard" class="app-view">
+                    <div class="view-header">
+                        <h1 class="view-title">Dashboard</h1>
+                        <p class="view-subtitle" id="dashboard-subtitle">Выберите папку серверов для начала работы</p>
+                    </div>
+                    <div class="dashboard-grid">
+                        <div class="card stat-card">
+                            <div class="card-title">Total Members</div>
+                            <div class="stat-value" id="stat-members">0</div>
+                        </div>
+                        <div class="card stat-card">
+                            <div class="card-title">Active Servers</div>
+                            <div class="stat-value" id="stat-servers">0</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Access Server List -->
+                    <div class="card" style="margin-top: 20px;">
+                        <div class="card-title">Quick Server Access</div>
+                        <div id="dashboard-server-list" class="folders-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
+                            <div class="folders-empty">Select a folder to see servers</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Server Folders -->
+                <section id="view-folders" class="app-view">
+                    <div class="view-header">
+                        <h1 class="view-title">🗂️ Server Folders</h1>
+                        <p class="view-subtitle">Выберите папку для управления серверами</p>
+                    </div>
+                    <div class="folders-container">
+                        <div id="pending-assignment-banner" class="card hidden" style="border-color: #76ff03; background: rgba(118, 255, 3, 0.1);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <h3 id="pending-server-text" style="color: #76ff03; margin:0; font-size: 1.1rem;">✨ Select a folder</h3>
+                                <button id="cancel-assignment-btn" class="btn btn-ghost btn-sm">Cancel</button>
+                            </div>
+                        </div>
+                        <div class="folders-actions">
+                            <button id="create-folder-btn" class="btn btn-primary"><span>➕</span> Создать папку</button>
+                        </div>
+                        <div id="folders-grid" class="folders-grid">
+                            <div class="folders-loading">Загрузка папок...</div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Logs Messages -->
+                <section id="view-logs-messages" class="app-view hidden">
+                    <div class="view-header">
+                        <h1 class="view-title">💬 Живые Логи</h1>
+                        <p class="view-subtitle">Live messages from Discord</p>
+                    </div>
+                    <div class="logs-controls" style="margin-bottom: 20px;">
+                        <button id="logs-messages-refresh" class="btn btn-secondary">🔄 Обновить сейчас</button>
+                    </div>
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="messages-table">
+                                <thead>
+                                    <tr>
+                                        <th>Время</th>
+                                        <th>Сервер</th>
+                                        <th>Канал</th>
+                                        <th>Пользователь</th>
+                                        <th>Сообщение</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="messages-logs-body">
+                                    <tr><td colspan="5" class="no-data">Загрузка...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TETRIS -->
+                <section id="view-tetris" class="app-view hidden">
+                    <div class="view-header">
+                        <h1 class="view-title">🕹️ Tetris</h1>
+                        <p class="view-subtitle">Relax and stack some blocks</p>
+                    </div>
+                    <div class="tetris-container" style="display:flex; gap:20px; justify-content:center;">
+                        <div style="position:relative;">
+                            <canvas id="tetris-canvas" width="300" height="600" style="border:2px solid #333; background:#000;"></canvas>
+                            <div id="tetris-overlay" class="hidden" style="position:absolute; inset:0; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white;">
+                                <h2 id="overlay-title">TETRIS</h2>
+                                <p id="overlay-message">Press Start</p>
+                            </div>
+                        </div>
+                        <div class="tetris-sidebar" style="display:flex; flex-direction:column; gap:20px; width:150px;">
+                            <div class="card">
+                                <div class="card-title">Next</div>
+                                <canvas id="tetris-next" width="100" height="100" style="width:100%;"></canvas>
+                            </div>
+                            <div class="card">
+                                <div class="card-title">Score</div>
+                                <div id="tetris-score" style="font-size:1.5rem; color:#FFD54A;">0</div>
+                            </div>
+                            <div class="card">
+                                <div class="card-title">Level</div>
+                                <div id="tetris-level" style="font-size:1.2rem;">1</div>
+                            </div>
+                            <button id="tetris-start" class="btn btn-primary">Start</button>
+                            <button id="tetris-pause" class="btn btn-secondary" disabled>Pause</button>
+                            <button id="tetris-restart" class="btn btn-ghost" style="color:red;">Reset</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MEMES -->
+                <section id="view-memes" class="app-view hidden">
+                    <div class="view-header">
+                        <h1 class="view-title">🐸 Memes Feed</h1>
+                        <p class="view-subtitle">Shared by the community</p>
+                    </div>
+                    
+                    <!-- Upload -->
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-title">Upload Meme</div>
+                        <form id="meme-upload-form" style="display:flex; gap:10px; align-items:center;">
+                            <input type="file" id="meme-file" accept="image/*" style="flex:1;">
+                            <input type="text" id="meme-caption" placeholder="Caption (optional)" style="flex:2;">
+                            <button type="submit" class="btn btn-primary">Upload</button>
+                        </form>
+                    </div>
+
+                    <!-- Filter -->
+                    <div style="margin-bottom:20px; display:flex; gap:10px;">
+                        <button class="btn btn-sm btn-primary" id="sort-new">Newest</button>
+                        <button class="btn btn-sm btn-secondary" id="sort-popular">Popular</button>
+                    </div>
+
+                    <!-- Feed -->
+                    <div id="memes-grid" class="dashboard-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                        <div class="folders-empty">Loading Memes...</div>
+                    </div>
+                </section>
+
+                <!-- Moderation -->
+                <section id="view-moderation" class="app-view hidden">
+                    <div class="view-header">
+                        <h1 class="view-title">🛡️ Folder Admins</h1>
+                        <p class="view-subtitle" id="moderation-subtitle">Manage admins for the selected folder</p>
+                    </div>
+                    
+                    <div class="card" style="margin-bottom: 20px;">
+                        <div class="card-title">Add Folder Admin</div>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="admin-id-input" placeholder="User ID (e.g. 123456789)" style="flex:1;">
+                            <button id="btn-add-admin" class="btn btn-primary">Add Admin</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Admin List</div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Added At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admins-table-body">
+                                    <tr><td colspan="3" class="no-data">Select a folder to manage admins</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Folder Details -->
+                <section id="view-folder-details" class="app-view hidden">
+                    <div class="view-header">
+                        <button id="folder-back-btn" class="btn btn-ghost">← К папкам</button>
+                        <h1 class="view-title" id="folder-name">Папка</h1>
+                        <p class="view-subtitle">Управление серверами в этой группе</p>
+                    </div>
+                    <div class="folder-details-container">
+                        <div class="folder-actions">
+                            <button id="btn-select-folder-context" class="btn btn-primary" style="background:#76ff03; color:black; font-weight:bold;">✅ Выбрать эту папку</button>
+                            <button id="add-server-btn" class="btn btn-secondary">➕ Добавить сервер (OAuth)</button>
+                        </div>
+                        <div id="folder-servers-grid" class="servers-grid"></div>
+                    </div>
+                </section>
+
+                <!-- Server Details (Individual Config) -->
+                <section id="view-server-details" class="app-view hidden">
+                    <div class="view-header">
+                        <div style="display:flex; justify-content:space-between; width:100%;">
+                            <button id="server-back-btn" class="btn btn-ghost">← Назад</button>
+                            <div style="display:flex; gap:10px;">
+                                <button id="btn-prev-server" class="btn btn-ghost btn-sm">◀</button>
+                                <button id="btn-next-server" class="btn btn-ghost btn-sm">▶</button>
+                            </div>
+                        </div>
+                        <h1 class="view-title" id="detail-server-name">Loading...</h1>
+                        <p class="view-subtitle" id="detail-server-id">ID: ...</p>
+                    </div>
+
+                    <div class="dashboard-grid" style="margin-bottom: 20px;">
+                        <div class="card stat-card" style="flex-direction:row; align-items:center; gap:20px;">
+                            <img id="detail-server-icon" src="" style="width:64px; height:64px; border-radius:50%; background:#222;">
+                            <div>
+                                <div class="card-title" style="margin-bottom:5px;">Members</div>
+                                <div class="stat-value" id="detail-server-members">0</div>
+                            </div>
+                        </div>
+                        <div class="card" style="display:flex; align-items:center; justify-content:center;">
+                            <button id="btn-copy-server-id" class="btn btn-secondary">📋 Copy Server ID</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">Bot Configuration</div>
+                        <div class="settings-list">
+                            <div class="setting-row" style="display:block;">
+                                <label class="setting-label" style="display:block; margin-bottom:5px;">In-Discord Logs Channel ID</label>
+                                <input type="text" id="config-log-channel" placeholder="e.g. 123456789012345678">
+                            </div>
+                            <div class="setting-row" style="display:block;">
+                                <label class="setting-label" style="display:block; margin-bottom:5px;">Big Action Channel ID (Bans)</label>
+                                <input type="text" id="config-big-action" placeholder="e.g. 123456789012345678">
+                            </div>
+                            <div class="setting-row" style="display:block;">
+                                <label class="setting-label" style="display:block; margin-bottom:5px;">Bot Name (Nickname)</label>
+                                <input type="text" id="config-bot-name" placeholder="Nexus Bot">
+                            </div>
+                            <div class="setting-row" style="display:block;">
+                                <label class="setting-label" style="display:block; margin-bottom:5px;">Command Prefix</label>
+                                <input type="text" id="config-prefix" placeholder="C7/">
+                            </div>
+                            <div style="margin-top:20px; text-align:right;">
+                                <button id="btn-save-server-config" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Help/FAQ -->
+                <section id="view-help-faq" class="app-view hidden">
+                    <div class="view-header">
+                        <h1 class="view-title">❓ FAQ</h1>
+                    </div>
+                    <div id="faq-container" class="dashboard-grid"></div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="tetris.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

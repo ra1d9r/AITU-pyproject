@@ -1,0 +1,5 @@
+{
+  "name": "BotForge AI",
+  "description": "An AI-powered configuration dashboard for Discord bots. Use Gemini to generate bot personalities, moderation rules, and welcome messages automatically.",
+  "requestFramePermissions": []
+}
