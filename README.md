@@ -8,5 +8,7 @@ A multi server discord bot with a web dashboard for setting & management
 - Full chat logs for local use
 ## Used
 Python (discord, asyncpg, asyncio etc.)
+
 PostrgeSQL
+
 unhealthy amount of raw JS
